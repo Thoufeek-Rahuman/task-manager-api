@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pytest
 
 URL = "/api/v1/tasks"
@@ -158,11 +160,10 @@ def test_update_task(client):
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "id": task["id"],
-        "title": "New title",
-        "completed": True,
-    }
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["title"] == "New title"
+    assert data["completed"] is True
 
 
 def test_update_task_is_saved(client):
@@ -206,11 +207,10 @@ def test_patch_only_title_keeps_completed(client):
     response = client.patch(f"{URL}/{task['id']}", json={"title": "New title"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "id": task["id"],
-        "title": "New title",
-        "completed": True,
-    }
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["title"] == "New title"
+    assert data["completed"] is True
 
 
 def test_patch_only_completed_keeps_title(client):
@@ -230,7 +230,28 @@ def test_patch_null_value_is_ignored(client, body):
     response = client.patch(f"{URL}/{task['id']}", json=body)
 
     assert response.status_code == 200
-    assert response.json() == {"id": task["id"], "title": "Keep me", "completed": True}
+    data = response.json()
+    assert data["title"] == "Keep me"
+    assert data["completed"] is True
+
+
+def test_patch_empty_body_changes_nothing(client):
+    task = create_task(client, "Keep me", completed=True)
+
+    response = client.patch(f"{URL}/{task['id']}", json={})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "Keep me"
+    assert data["completed"] is True
+
+
+def test_patch_empty_title_returns_422(client):
+    task = create_task(client, "Keep me")
+
+    response = client.patch(f"{URL}/{task['id']}", json={"title": ""})
+
+    assert response.status_code == 422
 
 
 def test_patch_missing_task_returns_404(client):
@@ -282,3 +303,41 @@ def test_ids_are_not_reused_after_delete(client):
     new_task = create_task(client, "New")
 
     assert new_task["id"] > task["id"]
+
+
+# ---------- Timestamps ----------
+
+
+def test_created_task_has_timestamps(client):
+    before = datetime.now().astimezone()
+
+    task = create_task(client, "With timestamps")
+
+    created_at = datetime.fromisoformat(task["created_at"])
+    updated_at = datetime.fromisoformat(task["updated_at"])
+    assert created_at.tzinfo is not None
+    assert updated_at.tzinfo is not None
+    assert abs(created_at - before) < timedelta(minutes=1)
+    assert updated_at == created_at
+
+
+def test_client_cannot_set_timestamps(client):
+    response = client.post(
+        URL,
+        json={"title": "Sneaky", "created_at": "2000-01-01T00:00:00+00:00"},
+    )
+
+    assert response.status_code == 201
+    assert not response.json()["created_at"].startswith("2000-")
+
+
+def test_patch_keeps_created_at(client):
+    task = create_task(client, "Original")
+
+    response = client.patch(f"{URL}/{task['id']}", json={"completed": True})
+
+    data = response.json()
+    assert data["created_at"] == task["created_at"]
+    assert datetime.fromisoformat(data["updated_at"]) >= datetime.fromisoformat(
+        task["updated_at"]
+    )
