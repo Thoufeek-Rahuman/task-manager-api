@@ -68,7 +68,7 @@ def test_list_tasks_empty(client):
     response = client.get(URL)
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"items": [], "total": 0, "limit": 5, "offset": 0}
 
 
 def test_list_tasks_ordered_by_id(client):
@@ -77,7 +77,7 @@ def test_list_tasks_ordered_by_id(client):
 
     response = client.get(URL)
 
-    ids = [task["id"] for task in response.json()]
+    ids = [task["id"] for task in response.json()["items"]]
     assert ids == [first["id"], second["id"]]
 
 
@@ -87,7 +87,9 @@ def test_list_tasks_filter_completed_true(client):
 
     response = client.get(URL, params={"completed": True})
 
-    assert response.json() == [done]
+    data = response.json()
+    assert data["items"] == [done]
+    assert data["total"] == 1
 
 
 def test_list_tasks_filter_completed_false(client):
@@ -96,7 +98,9 @@ def test_list_tasks_filter_completed_false(client):
 
     response = client.get(URL, params={"completed": False})
 
-    assert response.json() == [open_task]
+    data = response.json()
+    assert data["items"] == [open_task]
+    assert data["total"] == 1
 
 
 def test_list_tasks_default_limit_is_5(client):
@@ -105,7 +109,7 @@ def test_list_tasks_default_limit_is_5(client):
 
     response = client.get(URL)
 
-    assert len(response.json()) == 5
+    assert len(response.json()["items"]) == 5
 
 
 def test_list_tasks_custom_limit(client):
@@ -114,12 +118,80 @@ def test_list_tasks_custom_limit(client):
 
     response = client.get(URL, params={"limit": 2})
 
-    assert len(response.json()) == 2
+    assert len(response.json()["items"]) == 2
 
 
 @pytest.mark.parametrize("limit", [0, -1, 101, "abc"])
 def test_list_tasks_invalid_limit_returns_422(client, limit):
     response = client.get(URL, params={"limit": limit})
+
+    assert response.status_code == 422
+
+
+# ---------- Pagination ----------
+
+
+def test_pagination_second_page(client):
+    tasks = [create_task(client, f"Task {i}") for i in range(7)]
+
+    response = client.get(URL, params={"limit": 5, "offset": 5})
+
+    data = response.json()
+    assert [t["id"] for t in data["items"]] == [tasks[5]["id"], tasks[6]["id"]]
+    assert data["total"] == 7
+    assert data["limit"] == 5
+    assert data["offset"] == 5
+
+
+def test_pagination_pages_do_not_overlap(client):
+    for i in range(7):
+        create_task(client, f"Task {i}")
+
+    page1 = client.get(URL, params={"limit": 5, "offset": 0}).json()["items"]
+    page2 = client.get(URL, params={"limit": 5, "offset": 5}).json()["items"]
+
+    ids1 = {t["id"] for t in page1}
+    ids2 = {t["id"] for t in page2}
+    assert ids1.isdisjoint(ids2)
+    assert len(ids1 | ids2) == 7
+
+
+def test_pagination_offset_past_the_end(client):
+    for i in range(3):
+        create_task(client, f"Task {i}")
+
+    response = client.get(URL, params={"offset": 10})
+
+    data = response.json()
+    assert response.status_code == 200
+    assert data["items"] == []
+    assert data["total"] == 3
+
+
+def test_total_ignores_limit_and_offset(client):
+    for i in range(7):
+        create_task(client, f"Task {i}")
+
+    response = client.get(URL, params={"limit": 2, "offset": 3})
+
+    assert response.json()["total"] == 7
+
+
+def test_total_uses_completed_filter(client):
+    for i in range(3):
+        create_task(client, f"Done {i}", completed=True)
+    create_task(client, "Open", completed=False)
+
+    response = client.get(URL, params={"completed": True, "limit": 1})
+
+    data = response.json()
+    assert len(data["items"]) == 1
+    assert data["total"] == 3
+
+
+@pytest.mark.parametrize("offset", [-1, "abc"])
+def test_invalid_offset_returns_422(client, offset):
+    response = client.get(URL, params={"offset": offset})
 
     assert response.status_code == 422
 

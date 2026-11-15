@@ -19,3 +19,10 @@ class Task(TaskCreate):
 class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     completed: bool | None = None
+
+
+class TaskPage(BaseModel):
+    items: list[Task]
+    total: int
+    limit: int
+    offset: int

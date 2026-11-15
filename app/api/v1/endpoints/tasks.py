@@ -3,20 +3,22 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import SessionDep
-from app.schemas.task import Task, TaskCreate, TaskUpdate
+from app.schemas.task import Task, TaskCreate, TaskPage, TaskUpdate
 from app.services import task_service
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-@router.get("", response_model=list[Task])
+@router.get("", response_model=TaskPage)
 def get_tasks(
     db: SessionDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 5,
+    offset: Annotated[int, Query(ge=0)] = 0,
     completed: bool | None = None,
 ):
-    tasks = task_service.list_tasks(db, limit, completed)
-    return tasks
+    items = task_service.list_tasks(db, limit, offset, completed)
+    total = task_service.count_tasks(db, completed)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/{task_id}", response_model=Task)

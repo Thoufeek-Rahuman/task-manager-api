@@ -1,15 +1,28 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 
 
-def list_tasks(db: Session, limit: int, completed: bool | None = None) -> list[Task]:
-    stmt = select(Task)
+# The leading _ in _apply_filters is a Python convention meaning "internal to this module". Routes shouldn't call it.
+def _apply_filters(stmt, completed: bool | None):
     if completed is not None:
         stmt = stmt.where(Task.completed == completed)
-    stmt = stmt.order_by(Task.id).limit(limit)
+    return stmt
+
+
+def count_tasks(db: Session, completed: bool | None = None) -> int:
+    stmt = _apply_filters(select(func.count()).select_from(Task), completed)
+    return db.execute(stmt).scalar_one()
+
+
+def list_tasks(
+    db: Session, limit: int, offset: int, completed: bool | None = None
+) -> list[Task]:
+    stmt = select(Task)
+    stmt = _apply_filters(stmt, completed)
+    stmt = stmt.order_by(Task.id).offset(offset).limit(limit)
     return list(db.scalars(stmt).all())
 
 
