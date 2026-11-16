@@ -10,6 +10,7 @@ dependencies = [
     "psycopg2>=2.9.13",
     "pwdlib[argon2]>=0.4.0",
     "pydantic-settings>=2.16.2",
+    "pyjwt>=2.15.1",
     "sqlalchemy>=2.1.8",
 ]
 [tool.fastapi]
