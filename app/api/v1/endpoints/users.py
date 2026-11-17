@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import SessionDep
+from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user import UserCreate, UserRead
 from app.services import user_service
 
@@ -15,3 +15,8 @@ def create_user(db: SessionDep, user: UserCreate):
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
         )
     return user_service.create_user(db, user)
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(current_user: CurrentUser):
+    return current_user

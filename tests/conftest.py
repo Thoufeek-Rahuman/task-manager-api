@@ -11,6 +11,7 @@ from app.main import app
 
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="task_manager_test")
 
+
 @pytest.fixture(scope="session")
 def engine():
     engine = create_engine(TEST_DATABASE_URL)
@@ -18,6 +19,7 @@ def engine():
     yield engine
     Base.metadata.drop_all(engine)
     engine.dispose()
+
 
 @pytest.fixture
 def db(engine):
@@ -34,8 +36,8 @@ def db(engine):
     transaction.rollback()
     connection.close()
 
-@pytest.fixture
-def client(db):
+
+def _make_client(db):
     def override_get_db():
         yield db
 
@@ -43,3 +45,25 @@ def client(db):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(db):
+    """A client that sends no token (an anonymous visitor)."""
+    yield from _make_client(db)
+
+
+@pytest.fixture
+def auth_client(db):
+    """A client logged in as owner@example.com; every request sends its token."""
+    for c in _make_client(db):
+        c.post(
+            "/api/v1/users",
+            json={"email": "owner@example.com", "password": "secret123"},
+        )
+        response = c.post(
+            "/api/v1/auth/login",
+            data={"username": "owner@example.com", "password": "secret123"},
+        )
+        c.headers["Authorization"] = f"Bearer {response.json()['access_token']}"
+        yield c

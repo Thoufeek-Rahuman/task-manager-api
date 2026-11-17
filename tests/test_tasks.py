@@ -5,6 +5,12 @@ import pytest
 URL = "/api/v1/tasks"
 
 
+@pytest.fixture
+def client(auth_client):
+    # Task routes need a token, so every test in this file uses the logged-in client.
+    return auth_client
+
+
 def create_task(client, title="Task", completed=False):
     """Helper: create a task through the API and return its JSON."""
     response = client.post(URL, json={"title": title, "completed": completed})

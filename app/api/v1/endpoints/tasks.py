@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import SessionDep
+from app.api.deps import CurrentUser, SessionDep
 from app.schemas.task import Task, TaskCreate, TaskPage, TaskUpdate
 from app.services import task_service
 
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.get("", response_model=TaskPage)
 def get_tasks(
     db: SessionDep,
+    current_user: CurrentUser,
     limit: Annotated[int, Query(ge=1, le=100)] = 5,
     offset: Annotated[int, Query(ge=0)] = 0,
     completed: bool | None = None,
@@ -22,7 +23,7 @@ def get_tasks(
 
 
 @router.get("/{task_id}", response_model=Task)
-def get_task(db: SessionDep, task_id: int):
+def get_task(db: SessionDep, current_user: CurrentUser, task_id: int):
     task = task_service.get_task(db, task_id)
     if task is None:
         raise HTTPException(
@@ -32,13 +33,15 @@ def get_task(db: SessionDep, task_id: int):
 
 
 @router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
-def create_task(db: SessionDep, task_in: TaskCreate):
+def create_task(db: SessionDep, current_user: CurrentUser, task_in: TaskCreate):
     task = task_service.create_task(db, task_in)
     return task
 
 
 @router.put("/{task_id}", response_model=Task)
-def update_task(db: SessionDep, task_id: int, task_update: TaskCreate):
+def update_task(
+    db: SessionDep, current_user: CurrentUser, task_id: int, task_update: TaskCreate
+):
     task = task_service.get_task(db, task_id)
     if task is None:
         raise HTTPException(
@@ -49,7 +52,9 @@ def update_task(db: SessionDep, task_id: int, task_update: TaskCreate):
 
 
 @router.patch("/{task_id}", response_model=Task)
-def patch_task(db: SessionDep, task_id: int, task_update: TaskUpdate):
+def patch_task(
+    db: SessionDep, current_user: CurrentUser, task_id: int, task_update: TaskUpdate
+):
 
     task = task_service.get_task(db, task_id)
     if task is None:
@@ -61,7 +66,7 @@ def patch_task(db: SessionDep, task_id: int, task_update: TaskUpdate):
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(db: SessionDep, task_id: int):
+def delete_task(db: SessionDep, current_user: CurrentUser, task_id: int):
     task = task_service.get_task(db, task_id)
     if task is None:
         raise HTTPException(
