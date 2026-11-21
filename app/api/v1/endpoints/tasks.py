@@ -17,14 +17,14 @@ def get_tasks(
     offset: Annotated[int, Query(ge=0)] = 0,
     completed: bool | None = None,
 ):
-    items = task_service.list_tasks(db, limit, offset, completed)
-    total = task_service.count_tasks(db, completed)
+    items = task_service.list_tasks(db, limit, offset, current_user.id, completed)
+    total = task_service.count_tasks(db, current_user.id, completed)
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/{task_id}", response_model=Task)
 def get_task(db: SessionDep, current_user: CurrentUser, task_id: int):
-    task = task_service.get_task(db, task_id)
+    task = task_service.get_task(db, task_id, current_user.id)
     if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
@@ -34,7 +34,7 @@ def get_task(db: SessionDep, current_user: CurrentUser, task_id: int):
 
 @router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
 def create_task(db: SessionDep, current_user: CurrentUser, task_in: TaskCreate):
-    task = task_service.create_task(db, task_in)
+    task = task_service.create_task(db, task_in, current_user.id)
     return task
 
 
@@ -42,7 +42,7 @@ def create_task(db: SessionDep, current_user: CurrentUser, task_in: TaskCreate):
 def update_task(
     db: SessionDep, current_user: CurrentUser, task_id: int, task_update: TaskCreate
 ):
-    task = task_service.get_task(db, task_id)
+    task = task_service.get_task(db, task_id, current_user.id)
     if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
@@ -56,7 +56,7 @@ def patch_task(
     db: SessionDep, current_user: CurrentUser, task_id: int, task_update: TaskUpdate
 ):
 
-    task = task_service.get_task(db, task_id)
+    task = task_service.get_task(db, task_id, current_user.id)
     if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
@@ -67,7 +67,7 @@ def patch_task(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(db: SessionDep, current_user: CurrentUser, task_id: int):
-    task = task_service.get_task(db, task_id)
+    task = task_service.get_task(db, task_id, current_user.id)
     if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"

@@ -53,17 +53,27 @@ def client(db):
     yield from _make_client(db)
 
 
+def _register_and_login(client, email, password="secret123"):
+    """Register a user and return the Authorization header for them."""
+    client.post("/api/v1/users", json={"email": email, "password": password})
+    response = client.post(
+        "/api/v1/auth/login", data={"username": email, "password": password}
+    )
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
 @pytest.fixture
 def auth_client(db):
     """A client logged in as owner@example.com; every request sends its token."""
     for c in _make_client(db):
-        c.post(
-            "/api/v1/users",
-            json={"email": "owner@example.com", "password": "secret123"},
-        )
-        response = c.post(
-            "/api/v1/auth/login",
-            data={"username": "owner@example.com", "password": "secret123"},
-        )
-        c.headers["Authorization"] = f"Bearer {response.json()['access_token']}"
+        c.headers.update(_register_and_login(c, "owner@example.com"))
         yield c
+
+
+@pytest.fixture
+def other_user_headers(auth_client):
+    """Authorization header for a second user, other@example.com.
+
+    Pass it per request: auth_client.get(url, headers=other_user_headers)
+    """
+    return _register_and_login(auth_client, "other@example.com")

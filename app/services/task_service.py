@@ -6,32 +6,37 @@ from app.schemas.task import TaskCreate, TaskUpdate
 
 
 # The leading _ in _apply_filters is a Python convention meaning "internal to this module". Routes shouldn't call it.
-def _apply_filters(stmt, completed: bool | None):
+def _apply_filters(stmt, completed: bool | None, owner_id: int):
     if completed is not None:
         stmt = stmt.where(Task.completed == completed)
-    return stmt
+    return stmt.where(Task.user_id == owner_id)
 
 
-def count_tasks(db: Session, completed: bool | None = None) -> int:
-    stmt = _apply_filters(select(func.count()).select_from(Task), completed)
+def count_tasks(db: Session, owner_id: int, completed: bool | None = None) -> int:
+    stmt = _apply_filters(select(func.count()).select_from(Task), completed, owner_id)
     return db.execute(stmt).scalar_one()
 
 
 def list_tasks(
-    db: Session, limit: int, offset: int, completed: bool | None = None
+    db: Session,
+    limit: int,
+    offset: int,
+    owner_id: int,
+    completed: bool | None = None,
 ) -> list[Task]:
     stmt = select(Task)
-    stmt = _apply_filters(stmt, completed)
+    stmt = _apply_filters(stmt, completed, owner_id)
     stmt = stmt.order_by(Task.id).offset(offset).limit(limit)
     return list(db.scalars(stmt).all())
 
 
-def get_task(db: Session, task_id: int) -> Task | None:
-    return db.get(Task, task_id)
+def get_task(db: Session, task_id: int, owner_id: int) -> Task | None:
+    stmt = select(Task).where(Task.id == task_id, Task.user_id == owner_id)
+    return db.scalar(stmt)
 
 
-def create_task(db: Session, task_in: TaskCreate) -> Task:
-    task = Task(**task_in.model_dump())
+def create_task(db: Session, task_in: TaskCreate, owner_id: int) -> Task:
+    task = Task(**task_in.model_dump(), user_id=owner_id)
     db.add(task)
     db.commit()
     return task
