@@ -52,7 +52,9 @@ def test_duplicate_email_returns_409(client):
     response = register(client)
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Email already registered"}
+    assert response.json() == {
+        "error": {"code": "conflict", "message": "Email already registered"}
+    }
 
 
 def test_duplicate_email_different_case_returns_409(client):

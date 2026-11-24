@@ -218,7 +218,9 @@ def test_get_missing_task_returns_404(client):
     response = client.get(f"{URL}/98898")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Task not Found"}
+    assert response.json() == {
+        "error": {"code": "not_found", "message": "Task not Found"}
+    }
 
 
 def test_get_task_with_non_integer_id_returns_422(client):

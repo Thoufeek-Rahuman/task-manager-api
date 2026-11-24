@@ -65,7 +65,9 @@ def test_login_wrong_password_returns_401(client, user):
     response = login(client, password="wrong-password")
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Incorrect email or password"}
+    assert response.json() == {
+        "error": {"code": "unauthorized", "message": "Incorrect email or password"}
+    }
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -85,7 +87,9 @@ def test_login_inactive_user_returns_403(client, db, user):
     response = login(client)
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Inactive user"}
+    assert response.json() == {
+        "error": {"code": "forbidden", "message": "Inactive user"}
+    }
 
 
 def test_login_with_json_body_returns_422(client, user):

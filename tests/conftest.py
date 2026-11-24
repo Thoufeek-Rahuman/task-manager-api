@@ -1,8 +1,14 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
+
+# Debug mode makes Starlette print tracebacks instead of calling the 500 handler.
+# Real environment variables beat .env, so tests always run with debug off.
+os.environ["DEBUG"] = "false"
 
 from app.core.config import settings
 from app.db.base import Base

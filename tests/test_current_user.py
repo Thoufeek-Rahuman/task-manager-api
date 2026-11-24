@@ -9,7 +9,9 @@ from app.core.security import create_access_token
 from app.models.user import User
 
 ME_URL = "/api/v1/users/me"
-UNAUTHORIZED = {"detail": "Could not validate credentials"}
+UNAUTHORIZED = {
+    "error": {"code": "unauthorized", "message": "Could not validate credentials"}
+}
 
 
 def bearer(token):
@@ -93,7 +95,9 @@ def test_inactive_user_returns_403(auth_client, db):
     response = auth_client.get(ME_URL)
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Inactive user"}
+    assert response.json() == {
+        "error": {"code": "forbidden", "message": "Inactive user"}
+    }
 
 
 # ---------- Which routes are protected ----------
