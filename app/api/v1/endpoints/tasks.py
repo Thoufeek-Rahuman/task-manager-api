@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.task import Task, TaskCreate, TaskPage, TaskUpdate
@@ -25,10 +25,6 @@ def get_tasks(
 @router.get("/{task_id}", response_model=Task)
 def get_task(db: SessionDep, current_user: CurrentUser, task_id: int):
     task = task_service.get_task(db, task_id, current_user.id)
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
-        )
     return task
 
 
@@ -43,10 +39,6 @@ def update_task(
     db: SessionDep, current_user: CurrentUser, task_id: int, task_update: TaskCreate
 ):
     task = task_service.get_task(db, task_id, current_user.id)
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
-        )
     task = task_service.update_task(db, task, task_update)
     return task
 
@@ -57,10 +49,6 @@ def patch_task(
 ):
 
     task = task_service.get_task(db, task_id, current_user.id)
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
-        )
     task = task_service.partial_update_task(db, task, task_update)
     return task
 
@@ -68,8 +56,4 @@ def patch_task(
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(db: SessionDep, current_user: CurrentUser, task_id: int):
     task = task_service.get_task(db, task_id, current_user.id)
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not Found"
-        )
     task_service.delete_task(db, task)

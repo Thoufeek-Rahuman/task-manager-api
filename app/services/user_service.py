@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ConflictError
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate
@@ -11,6 +12,8 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 
 
 def create_user(db: Session, user: UserCreate) -> User:
+    if get_user_by_email(db, user.email) is not None:
+        raise ConflictError("Email already registered")
     db_user = User(
         email=user.email.lower(), hashed_password=hash_password(user.password)
     )
@@ -20,7 +23,6 @@ def create_user(db: Session, user: UserCreate) -> User:
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User | None:
-    
     user = get_user_by_email(db, email)
     if not user:
         return None

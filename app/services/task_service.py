@@ -1,6 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import NotFoundError
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 
@@ -30,9 +31,12 @@ def list_tasks(
     return list(db.scalars(stmt).all())
 
 
-def get_task(db: Session, task_id: int, owner_id: int) -> Task | None:
+def get_task(db: Session, task_id: int, owner_id: int) -> Task:
     stmt = select(Task).where(Task.id == task_id, Task.user_id == owner_id)
-    return db.scalar(stmt)
+    task = db.scalar(stmt)
+    if task is None:
+        raise NotFoundError("Task not Found")
+    return task
 
 
 def create_task(db: Session, task_in: TaskCreate, owner_id: int) -> Task:

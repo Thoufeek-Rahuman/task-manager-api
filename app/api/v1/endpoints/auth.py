@@ -13,7 +13,6 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=Token)
 def login(db: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

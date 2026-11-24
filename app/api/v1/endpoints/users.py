@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user import UserCreate, UserRead
@@ -9,11 +9,6 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user(db: SessionDep, user: UserCreate):
-    db_user = user_service.get_user_by_email(db, user.email)
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
-        )
     return user_service.create_user(db, user)
 
 
