@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 
 from fastapi import FastAPI, Request, status
@@ -13,6 +14,8 @@ STATUS_CODES = {
     404: "not_found",
     405: "method_not_allowed",
 }
+
+logger = logging.getLogger(__name__)
 
 
 def error_response(
@@ -65,6 +68,7 @@ async def validation_handler(
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return error_response(
         status.HTTP_500_INTERNAL_SERVER_ERROR, "internal_error", "Internal server error"
     )
